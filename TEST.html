@@ -1,0 +1,263 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Simple CRM with Ticket System</title>
+    <style>
+        /* Your existing CSS styles */
+    </style>
+</head>
+
+<body>
+    <div id="loginSection">
+        <h1>Login Page</h1>
+        <form id="loginForm">
+            <label for="username">Username:</label>
+            <input type="text" id="username" required>
+
+            <label for="password">Password:</label>
+            <input type="password" id="password" required>
+
+            <button type="button" onclick="login()">Login</button>
+        </form>
+    </div>
+
+    <div id="crmSection" style="display: none;">
+        <button id="logoutButton" onclick="logout()">Log Out</button>
+
+        <h1 id="title">Simple CRM with Ticket System</h1>
+
+        <div id="userInfo">
+            <p id="userName"></p>
+            <p id="userEmail"></p>
+        </div>
+
+        <form id="crmForm">
+            <label for="ticketNumber">Ticket Number:</label>
+            <input type="text" id="ticketNumber" pattern="\d*" title="Please enter a number" oninput="this.value = this.value.replace(/\D/g,'')" required onchange="setStartTime()">
+
+            <label for="task">Task:</label>
+            <select id="task" required>
+                <option value="">Select Task</option>
+                <option value="HELPDESK_MONITOR">HELPDESK (Monitor Email/Checking of Emails/etc)</option>
+                <option value="FOLLOW_UP">Follow Up (Tech Support)</option>
+                <option value="FARMIND">Farmind (Monitoring/Report)</option>
+                <option value="DIGITAL_PR">Digital PR (Sharing Content)</option>
+                <option value="HELPDESK_SEND_EMAIL">HELPDESK (Sending Email/Ticket Creation/Response)</option>
+                <option value="MEETING">Meeting</option>
+                <option value="UNQ_LEADS">UNQ (Leads)</option>
+                <option value="HELPDESK_MONITOR_EMAIL">Helpdesk (Monitor Email/Checking of Emails/etc)</option>
+            </select>
+
+            <label for="startTime">Start Time:</label>
+            <input type="text" id="startTime" disabled>
+
+            <label for="endTime">End Time:</label>
+            <input type="text" id="endTime" disabled>
+
+            <button type="button" onclick="addEntry()">Save Transaction</button>
+        </form>
+
+        <div id="filterSection">
+            <label for="startDate">Start Date:</label>
+            <input type="date" id="startDate">
+
+            <label for="endDate">End Date:</label>
+            <input type="date" id="endDate">
+
+            <button id="filterButton" onclick="filterTransactions()">Filter Data</button>
+            <p id="error"></p>
+        </div>
+
+        <button id="downloadButton" onclick="downloadExcel()">Download Data</button>
+
+        <div id="entries">
+            <h2>Customer Transactions</h2>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Ticket Number</th>
+                        <th>Name</th>
+                        <th>Email</th>
+                        <th>Task</th>
+                        <th>Start Time</th>
+                        <th>End Time</th>
+                    </tr>
+                </thead>
+                <tbody id="entriesBody"></tbody>
+            </table>
+        </div>
+    </div>
+
+    <script>
+        let currentUser = null;
+
+        const users = [
+            { username: 'magliam@uas.com.ph', password: '12345', name: 'Agliam, Melanie O.', email: 'magliam@uas.com.ph', transactions: [] },
+            { username: 'jcbasa@uas.com.ph', password: '12345', name: 'Basa, John Carlo A.', email: 'jcbasa@uas.com.ph', transactions: [] },
+            { username: 'mkmacaspac@uas.com.ph', password: '12345', name: 'Macaspac, Ma. Karen C.', email: 'mkmacaspac@uas.com.ph', transactions: [] },
+            { username: 'emmallari@uas.com.ph', password: '12345', name: 'Mallari, Ella Marie F.', email: 'emmallari@uas.com.ph', transactions: [] },
+            { username: 'amanalo@uas.com.ph', password: '12345', name: 'Manalo, Aaron S.', email: 'amanalo@uas.com.ph', transactions: [] },
+            { username: 'lmanalon@uas.com.ph', password: '12345', name: 'Manalon, Louies Nicole M.', email: 'lmanalon@uas.com.ph', transactions: [] },
+            { username: 'mmendoza@uas.com.ph', password: '12345', name: 'Mendoza, Mark G.', email: 'mmendoza@uas.com.ph', transactions: [] },
+            { username: 'dsoriano@uas.com.ph', password: '12345', name: 'Soriano, Darryl A.', email: 'dsoriano@uas.com.ph', transactions: [] },
+            { username: 'jgigante@uas.com.ph', password: '12345', name: 'Velasquez, Jannary G.', email: 'jgigante@uas.com.ph', transactions: [] },
+            { username: 'jrmagbag@uas.com.ph', password: 'Default', name: 'Nan Magbag', email: 'jrmagbag@uas.com.ph', transactions: [] }
+        ];
+
+        function login() {
+            const username = document.getElementById('username').value;
+            const password = document.getElementById('password').value;
+
+            const user = users.find(user => user.username === username && user.password === password);
+
+            if (user) {
+                document.getElementById('loginSection').style.display = 'none';
+                document.getElementById('crmSection').style.display = 'block';
+
+                document.getElementById('userName').textContent = `Name: ${user.name}`;
+                document.getElementById('userEmail').textContent = `Email: ${user.email}`;
+
+                currentUser = user;
+
+                displayTransactions();
+            } else {
+                alert('Invalid username or password. Please try again.');
+            }
+        }
+
+        function setStartTime() {
+            const startTimeInput = document.getElementById('startTime');
+            startTimeInput.value = new Date().toLocaleDateString() + ' ' + new Date().toLocaleTimeString();
+        }
+
+        function addEntry() {
+            const ticketNumber = document.getElementById('ticketNumber').value;
+            const task = document.getElementById('task').value;
+            const startTime = document.getElementById('startTime').value;
+            const endTime = new Date().toLocaleDateString() + ' ' + new Date().toLocaleTimeString();
+
+            if (!ticketNumber || !currentUser || !task) {
+                alert('Please enter Ticket Number, Name, Email, and Task.');
+                return;
+            }
+
+            const entry = {
+                ticketNumber,
+                name: currentUser.name,
+                email: currentUser.email,
+                task,
+                startTime,
+                endTime
+            };
+
+            currentUser.transactions.push(entry);
+
+            document.getElementById('crmForm').reset();
+
+            displayTransactions();
+        }
+
+        function filterTransactions() {
+            const startDate = document.getElementById('startDate').value;
+            const endDate = document.getElementById('endDate').value;
+
+            if (startDate && endDate && startDate > endDate) {
+                document.getElementById('error').textContent = 'Start date cannot be greater than end date.';
+                return;
+            } else {
+                document.getElementById('error').textContent = '';
+            }
+
+            let filteredTransactions = [];
+
+            if (startDate && endDate) {
+                filteredTransactions = currentUser.transactions.filter(entry => {
+                    const entryDate = new Date(entry.startTime).toLocaleDateString();
+                    return entryDate >= startDate && entryDate <= endDate;
+                });
+            } else {
+                filteredTransactions = currentUser.transactions;
+            }
+
+            renderEntries(filteredTransactions);
+        }
+
+        function downloadExcel() {
+            let dataToDownload = currentUser.transactions;
+
+            const startDate = document.getElementById('startDate').value;
+            const endDate = document.getElementById('endDate').value;
+
+            if (startDate && endDate) {
+                dataToDownload = currentUser.transactions.filter(entry => {
+                    const entryDate = new Date(entry.startTime).toLocaleDateString();
+                    return entryDate >= startDate && entryDate <= endDate;
+                });
+            }
+
+            const content = generateExcelContent(dataToDownload);
+            const blob = new Blob([content], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+
+            const link = document.createElement('a');
+            link.href = window.URL.createObjectURL(blob);
+            link.download = 'transactions.xlsx';
+            link.click();
+        }
+
+        function generateExcelContent(data) {
+            const header = ['Ticket Number', 'Name', 'Email', 'Task', 'Start Time', 'End Time'];
+            const rows = data.map(entry => [entry.ticketNumber, entry.name, entry.email, entry.task, entry.startTime, entry.endTime]);
+            const allRows = [header, ...rows];
+
+            return allRows.map(row => row.join('\t')).join('\n');
+        }
+
+        function displayTransactions() {
+            const entriesBody = document.getElementById('entriesBody');
+            entriesBody.innerHTML = '';
+
+            if (currentUser.username === 'jrmagbag@uas.com.ph') {
+                const allTransactions = [];
+                users.forEach(user => {
+                    user.transactions.forEach(entry => {
+                        allTransactions.push(entry);
+                    });
+                });
+
+                renderEntries(allTransactions);
+            } else {
+                renderEntries(currentUser.transactions);
+            }
+        }
+
+        function renderEntries(entries) {
+            entries.forEach(entry => {
+                const row = entriesBody.insertRow();
+                Object.values(entry).forEach(value => {
+                    const cell = row.insertCell();
+                    cell.textContent = value;
+                });
+            });
+        }
+
+        function logout() {
+            document.getElementById('crmSection').style.display = 'none';
+            document.getElementById('loginSection').style.display = 'block';
+
+            document.getElementById('userName').textContent = '';
+            document.getElementById('userEmail').textContent = '';
+
+            document.getElementById('username').value = '';
+            document.getElementById('password').value = '';
+
+            document.getElementById('crmForm').reset();
+
+            currentUser = null;
+        }
+    </script>
+</body>
+
+</html>
